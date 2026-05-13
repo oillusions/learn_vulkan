@@ -1,0 +1,7 @@
+if (NOT TARGET stb)
+	set(STB_IMAGE_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/libs/external/stb/include)
+	set(STB_IMAGE_SRC ${CMAKE_SOURCE_DIR}/libs/external/stb/src/stb_image.cpp)
+	add_library(stb STATIC ${STB_IMAGE_SRC})
+	target_include_directories(stb PUBLIC ${STB_IMAGE_INCLUDE_DIR})
+	add_library(stb::stb ALIAS stb)
+endif()
