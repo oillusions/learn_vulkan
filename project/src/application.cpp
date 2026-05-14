@@ -30,7 +30,7 @@ Application Application::create() {
     auto device_context = application::impl::create_device_context(instance_context)
         | Error::unwrap("逻辑设备上下文创建失败");
 
-    auto swap_chain_context = application::impl::create_swap_chain_context(device_context, std::move(surface))
+    auto swap_chain_context = application::impl::create_swap_chain_context(device_context, std::move(surface), {})
         | Error::unwrap("交换链上下文创建失败");
 
 
@@ -47,15 +47,6 @@ Application::~Application() noexcept {
 
 void Application::init() noexcept {
     platform::input::init_platform_event(ebus, window_context);
-
-    ebus.subscribe<platform::input::event::types::CursorMoveEventContent>(
-        platform::input::EventNames(platform::input::EventNames::eCursorMove).to_value(),
-        [](const platform::input::event::types::CursorMoveEventContent &content) {
-            int width, height, pos_x, pos_y;
-            glfwGetWindowSize(content.window, &width, &height);
-            glfwGetWindowPos(content.window, &pos_x, &pos_y);
-            glfwSetWindowPos(content.window, pos_x + (static_cast<int>(content.x) - (width / 2)), pos_y + (static_cast<int>(content.y) - (height / 2)));
-    });
 
     ebus.subscribe<platform::input::event::types::KeyboardEventContent>(
         platform::input::EventNames(platform::input::EventNames::eKeyboard).to_value(),

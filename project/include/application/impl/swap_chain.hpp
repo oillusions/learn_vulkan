@@ -8,9 +8,14 @@
 
 
 namespace application::impl {
+    struct SwapChainConfig {
+        
+    };
+
     std::expected<vulkan::context::SwapChainContext, Error> 
     create_swap_chain_context(
         vulkan::context::DeviceContext& device_context,
-        vk::raii::SurfaceKHR surface
+        vk::raii::SurfaceKHR surface,
+        const SwapChainConfig& config
     ) noexcept;
 }
