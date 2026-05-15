@@ -36,15 +36,20 @@ Application Application::create() {
         | Error::unwrap("交换链上下文创建失败");
 
     auto frame_manager = vulkan::object_mgmt::frame::FrameManager::create(
-        device_context.device, 
+        device_context.physical_device.physical_device,
+        device_context.device,
+        device_context.queues[0],
         std::move(swap_chain_context)
-    )   | Error::unwrap("帧管理器创建失败");;
+    )   | Error::unwrap("帧管理器创建失败");
+
 
 
      return Application(
         std::move(event_bus), 
         std::move(window_context),
-        std::move(instance_context)
+        std::move(instance_context),
+        std::move(device_context),
+        std::move(frame_manager)
     );
 }
 
@@ -66,7 +71,9 @@ void Application::init() noexcept {
     glog.log<LogLevel::Info>("应用已启动");
 }
 
-bool Application::loop() noexcept {
+bool Application::loop() {
     glfwPollEvents();
+    auto token = frame_manager.obtain_frame_command_buffer()
+        | Error::unwrap("获取帧令牌失败");
     return !glfwWindowShouldClose(window_context.window);
 };
