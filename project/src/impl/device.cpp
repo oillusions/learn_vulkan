@@ -4,6 +4,7 @@
 #include "utils/utils.hpp"
 #include "project_config.hpp"
 #include "vulkan/context/device.hpp"
+#include "vulkan/context/physical_device.hpp"
 #include "vulkan/utils/queue_family.hpp"
 
 #include "vulkan/vulkan.hpp"
@@ -50,22 +51,6 @@ namespace application::impl {
         return std::set<vk::DeviceQueueCreateInfo>{};
     }
 
-    inline vulkan::context::PhysicalDeviceContext
-    create_physical_device_context(vk::raii::PhysicalDevice physical_device) noexcept {
-        const auto queue_family_properties = physical_device.getQueueFamilyProperties();
-
-        auto queue_family_counters = std::vector<vulkan::utils::QueueFamily>();
-        queue_family_counters.reserve(queue_family_properties.size());
-        for (const auto& [index, properters] : queue_family_properties | std::views::enumerate) {
-            queue_family_counters.emplace_back(properters, index);
-        }
-
-        return vulkan::context::PhysicalDeviceContext(
-            std::move(physical_device),
-            std::move(queue_family_counters)
-        );
-    }
-
     inline std::expected<vk::raii::Device, Error> 
     create_device(
         vk::raii::PhysicalDevice& physical_device,
@@ -97,7 +82,7 @@ namespace application::impl {
         auto result_physical_device = select_physical_device(instance_context);
         if (!result_physical_device) return result_physical_device.error()
             .forward("未找到合适的硬件设备");
-        auto physical_device_context = create_physical_device_context(
+        auto physical_device_context = vulkan::context::PhysicalDeviceContext::create(
             std::move(result_physical_device).value()
         );
 

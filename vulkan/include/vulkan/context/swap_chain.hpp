@@ -1,7 +1,7 @@
 #pragma once
 
-#include "vulkan/vulkan.hpp"
 #include <vector>
+#include <error.hpp>
 
 #include <vulkan/vulkan_raii.hpp>
 
@@ -35,5 +35,20 @@ namespace vulkan::context {
                 image_views(std::move(image_views)),
                 config(std::move(config))
             {};
+
+            
+
+            static std::expected<vulkan::context::SwapChainConfig, Error>
+            obtain_config(
+                const vk::raii::PhysicalDevice& physical_device,
+                const vk::raii::SurfaceKHR& surface
+            ) noexcept;
+
+            static std::expected<SwapChainContext, Error> 
+            create(
+                vk::raii::Device& device,
+                vk::raii::SurfaceKHR surface,
+                const SwapChainConfig& config
+            ) noexcept;
     };
 }
