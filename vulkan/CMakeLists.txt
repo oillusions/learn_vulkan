@@ -12,6 +12,8 @@ target_sources("vulkan" PRIVATE
 target_link_libraries("vulkan" PRIVATE
     Vulkan::Vulkan
     common::error
+
+    utils::utils
 )
 
 add_library("vulkan::vulkan_core" ALIAS "vulkan")

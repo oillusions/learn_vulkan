@@ -33,6 +33,7 @@ add_subdirectory(libs/common/utils/logger)
 add_subdirectory(libs/common/utils/error)
 add_subdirectory(libs/common/utils/event_bus)
 
+add_subdirectory(utils)
 add_subdirectory(platform)
 add_subdirectory(vulkan)
 
@@ -43,6 +44,8 @@ target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE
     common::logger
     common::error
     common::event_bus
+
+    utils::utils
 
     platform::platform
     vulkan::vulkan_core

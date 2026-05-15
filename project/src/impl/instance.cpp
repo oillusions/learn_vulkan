@@ -8,8 +8,8 @@
 
 #include "project_config.hpp"
 
-#include "common/utils.hpp"
-#include "common/global_logger.hpp"
+#include "utils/utils.hpp"
+#include "utils/global_logger.hpp"
 #include "vulkan/vulkan.hpp"
 
 

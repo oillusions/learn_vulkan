@@ -2,10 +2,12 @@
 
 #include <GLFW/glfw3.h>
 
-#include "common/global_logger.hpp"
+#include "utils/global_logger.hpp"
 
 #include "platform/input.hpp"
 #include "platform/window.hpp"
+
+#include "vulkan/object_mgmt/frame/frame_mgmt.hpp"
 
 #include "application/impl/instance.hpp"
 #include "application/impl/device.hpp"
@@ -32,6 +34,11 @@ Application Application::create() {
 
     auto swap_chain_context = application::impl::create_swap_chain_context(device_context, std::move(surface), {})
         | Error::unwrap("交换链上下文创建失败");
+
+    auto frame_manager = vulkan::object_mgmt::frame::FrameManager::create(
+        device_context.device, 
+        std::move(swap_chain_context)
+    )   | Error::unwrap("帧管理器创建失败");;
 
 
      return Application(

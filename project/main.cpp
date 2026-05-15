@@ -3,7 +3,7 @@
 
 #include "error.hpp"
 
-#include "common/global_logger.hpp"
+#include "utils/global_logger.hpp"
 #include "application/application.hpp"
 
 

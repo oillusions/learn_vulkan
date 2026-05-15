@@ -1,12 +1,11 @@
 #include "application/impl/device.hpp"
 
-#include "common/global_logger.hpp"
-#include "common/utils.hpp"
+#include "utils/global_logger.hpp"
+#include "utils/utils.hpp"
 #include "project_config.hpp"
 #include "vulkan/context/device.hpp"
 #include "vulkan/utils/queue_family.hpp"
 
-#include "common/global_logger.hpp"
 #include "vulkan/vulkan.hpp"
 #include <ranges>
 
