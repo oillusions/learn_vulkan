@@ -14,7 +14,6 @@
 #include "application/impl/swap_chain.hpp"
 
 
-
 Application Application::create() {
     platform::init_platform();
 
@@ -42,7 +41,7 @@ Application Application::create() {
         std::move(swap_chain_context)
     )   | Error::unwrap("帧管理器创建失败");
 
-
+    
 
      return Application(
         std::move(event_bus), 
@@ -73,7 +72,5 @@ void Application::init() noexcept {
 
 bool Application::loop() {
     glfwPollEvents();
-    auto token = frame_manager.obtain_frame_command_buffer()
-        | Error::unwrap("获取帧令牌失败");
     return !glfwWindowShouldClose(window_context.window);
 };

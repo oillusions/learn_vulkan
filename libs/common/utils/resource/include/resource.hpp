@@ -9,18 +9,18 @@
 /**
  * @brief 资源类接口
  */
-class IResource {
+class Resource {
 public:
-    IResource() = default;
-    IResource(const IResource&) = delete;
-    IResource& operator = (const IResource&) = delete;
-    IResource(IResource&&) = default;
-    IResource& operator = (IResource&&) = default;
-    virtual ~IResource() = default;
+    Resource() = default;
+    Resource(const Resource&) = delete;
+    Resource& operator = (const Resource&) = delete;
+    Resource(Resource&&) = default;
+    Resource& operator = (Resource&&) = default;
+    ~Resource() = default;
 };
 
 template<typename ResourceType>
-class ResourceWrapper : public IResource {
+class ResourceWrapper : public Resource {
     private:
         ResourceType value;
     public:
@@ -35,7 +35,7 @@ class ResourceWrapper : public IResource {
             value(std::move(value))
         {};
 
-        ~ResourceWrapper() override = default;
+        ~ResourceWrapper() = default;
 
         operator ResourceType& () {
             return value;
@@ -51,7 +51,7 @@ class ResourceWrapper : public IResource {
 };
 
 template<typename ResourceType>
-requires std::derived_from<ResourceType, IResource>
+requires std::derived_from<ResourceType, Resource>
 class TypedResourceManager {
     private:
         std::unordered_map<std::string, std::unique_ptr<ResourceType>> resource_map;

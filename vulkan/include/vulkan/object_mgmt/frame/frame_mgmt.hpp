@@ -41,11 +41,7 @@ namespace vulkan::object_mgmt::frame {
                             is_release = true;
                         }
                     }
-
-                    ~Token() noexcept {
-                        present();
-                    }
-
+                    
                     Token(Token&& other) noexcept :
                         manager(other.manager),
                         image_index(other.image_index),

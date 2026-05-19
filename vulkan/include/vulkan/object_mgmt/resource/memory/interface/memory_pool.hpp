@@ -5,7 +5,7 @@
 #include "vulkan/object_mgmt/resource/memory/detail.hpp"
 
 
-namespace vulkan::utils {
+namespace vulkan::object_mgmt::resuorce {
     class MemoryPool {
         public:
             class Allocation {

@@ -1,5 +1,6 @@
 #include "vulkan/context/physical_device.hpp"
-#include <ranges>
+
+
 
 namespace vulkan::context {
     PhysicalDeviceContext
@@ -10,8 +11,11 @@ namespace vulkan::context {
 
         auto queue_family_counters = std::vector<vulkan::utils::QueueFamily>();
         queue_family_counters.reserve(queue_family_properties.size());
-        for (const auto& [index, properters] : queue_family_properties | std::views::enumerate) {
+
+        vk::DeviceSize index{0}; 
+        for (const auto& properters : queue_family_properties) {
             queue_family_counters.emplace_back(properters, index);
+            index++;
         }
 
         return vulkan::context::PhysicalDeviceContext(

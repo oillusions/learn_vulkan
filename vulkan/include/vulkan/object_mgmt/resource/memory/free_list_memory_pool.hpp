@@ -9,7 +9,7 @@
 #include "detail.hpp"
 #include "vulkan/object_mgmt/resource/memory/interface/memory_pool.hpp"
 
-namespace vulkan::utils {
+namespace vulkan::object_mgmt::resuorce {
     template<detail::FreeListAllocatorStrategy Strategy>
     class FreeListMemoryPool : public MemoryPool {
         public:

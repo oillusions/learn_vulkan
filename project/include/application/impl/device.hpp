@@ -4,7 +4,7 @@
 
 #include <vulkan/vulkan_raii.hpp>
 
-#include <Error.hpp>
+#include <error.hpp>
 
 #include "vulkan/context/instace.hpp"
 #include "vulkan/context/device.hpp"

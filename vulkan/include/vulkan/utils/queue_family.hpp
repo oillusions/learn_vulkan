@@ -2,7 +2,7 @@
 
 #include <vulkan/vulkan_raii.hpp>
 
-#include <Error.hpp>
+#include <error.hpp>
 
 namespace vulkan::utils {
     class QueueFamily {

@@ -33,17 +33,19 @@ inline std::string to_string(const LogLevel level) {
     return "?";
 }
 
+inline const auto program_start_time = std::chrono::steady_clock::now();
+
 
 class LogAdditionInfo {
     public:
         std::string addition_str;
         LogAdditionInfo() noexcept {
-            const auto time_info = std::chrono::system_clock::now();
-            const auto local_time = std::chrono::zoned_time{std::chrono::current_zone(), time_info};
+            const auto curr_time = std::chrono::steady_clock::now();
+            // const auto local_time = std::chrono::zoned_time{std::chrono::current_zone(), time_info};
 
             const auto thread_id = std::this_thread::get_id();
 
-            addition_str = std::format("[thread-{}] <{:%H:%M:%S}>", thread_id, local_time);
+            addition_str = std::format("[thread-{}] <{:%H:%M:%S}>", thread_id, curr_time - program_start_time);
         }
 };
 
