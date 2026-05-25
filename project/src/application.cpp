@@ -8,11 +8,15 @@
 #include "platform/window.hpp"
 
 #include "vulkan/object_mgmt/frame/frame_mgmt.hpp"
+#include "vulkan/object_mgmt/render_pass.hpp"
 
 #include "application/impl/instance.hpp"
 #include "application/impl/device.hpp"
 #include "application/impl/swap_chain.hpp"
+#include "vulkan/vulkan.hpp"
 
+
+using namespace vulkan::object_mgmt;
 
 Application Application::create() {
     platform::init_platform();
@@ -34,16 +38,38 @@ Application Application::create() {
     auto swap_chain_context = application::impl::create_swap_chain_context(device_context, std::move(surface), {})
         | Error::unwrap("交换链上下文创建失败");
 
-    auto frame_manager = vulkan::object_mgmt::frame::FrameManager::create(
+    auto frame_manager = frame::FrameManager::create(
         device_context.physical_device.physical_device,
         device_context.device,
         device_context.queues[0],
         std::move(swap_chain_context)
     )   | Error::unwrap("帧管理器创建失败");
 
-    
+    auto render_pass_builder = RenderPass::builder();
+    auto attachment = render_pass_builder.appendAttachment();
 
-     return Application(
+    attachment.description
+        .setFormat(swap_chain_context.config.surface_format.format)
+        .setSamples(vk::SampleCountFlagBits::e1)
+        .setLoadOp(vk::AttachmentLoadOp::eClear)
+        .setStoreOp(vk::AttachmentStoreOp::eStore)
+        .setStencilLoadOp(vk::AttachmentLoadOp::eDontCare)
+        .setStencilStoreOp(vk::AttachmentStoreOp::eDontCare)
+        .setInitialLayout(vk::ImageLayout::eUndefined)
+        .setFinalLayout(vk::ImageLayout::ePresentSrcKHR);
+
+    auto subpass_0 = render_pass_builder.appendSubpass();
+
+    subpass_0.appendAttachment(
+        attachment, 
+        vk::ImageLayout::eColorAttachmentOptimal,
+        AttachmentUsage::Color
+    );
+
+    auto render_pass = render_pass_builder.build(device_context.device)
+        | Error::unwrap("渲染通道创建失败");
+
+    return Application(
         std::move(event_bus), 
         std::move(window_context),
         std::move(instance_context),
