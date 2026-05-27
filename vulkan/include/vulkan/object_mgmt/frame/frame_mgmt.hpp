@@ -1,6 +1,7 @@
 #pragma once
 
 #include <error.hpp>
+#include <utility>
 #include <vulkan/vulkan_raii.hpp>
 
 #include "vulkan/context/swap_chain.hpp"
@@ -40,7 +41,7 @@ namespace vulkan::object_mgmt::frame {
                         frame_buffer(frame_buffer)
                     {};
 
-                    void present() noexcept {
+                    void present() {
                         if (!is_release) {
                             manager.present(*this);
                             is_release = true;
@@ -53,8 +54,7 @@ namespace vulkan::object_mgmt::frame {
                         frame_state_index(other.frame_state_index),
                         command_buffer(other.command_buffer),
                         frame_buffer(other.frame_buffer),
-                        is_release(other.is_release) {
-                        is_release = true;
+                        is_release(std::exchange(other.is_release, true)) {
                     };
                     Token(const Token&) = delete;
                     Token& operator = (const Token&) = delete;

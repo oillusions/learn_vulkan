@@ -21,6 +21,10 @@ namespace vulkan::context {
                 physical_device(std::move(physical_device)),
                 device(std::move(device)),
                 queues(std::move(queues))
-            {}
+            {};
+
+            vk::raii::Device& operator * () noexcept {
+                return device;
+            }
     };
 }

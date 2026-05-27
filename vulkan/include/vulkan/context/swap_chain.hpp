@@ -36,13 +36,15 @@ namespace vulkan::context {
                 config(std::move(config))
             {};
 
-            
-
             static std::expected<vulkan::context::SwapChainConfig, Error>
             obtain_config(
                 const vk::raii::PhysicalDevice& physical_device,
                 const vk::raii::SurfaceKHR& surface
             ) noexcept;
+
+            vk::raii::SwapchainKHR& operator * () noexcept {
+                return swap_chain;
+            }
 
             static std::expected<SwapChainContext, Error> 
             create(

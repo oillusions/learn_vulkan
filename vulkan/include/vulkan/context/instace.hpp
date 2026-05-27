@@ -19,5 +19,9 @@ namespace vulkan::context {
                 instance(std::move(instance)),
                 messenger(std::move(messenger))
             {};  
+
+            vk::raii::Instance& operator * () noexcept {
+                return instance;
+            }
     };
 }

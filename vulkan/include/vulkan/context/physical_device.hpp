@@ -17,6 +17,10 @@ namespace vulkan::context {
                 physical_device(std::move(physical_device)),
                 queue_families(std::move(queue_families))
             {}
+
+            vk::raii::PhysicalDevice& operator * () noexcept {
+                return physical_device;
+            }
             
             static vulkan::context::PhysicalDeviceContext
             create(

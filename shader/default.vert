@@ -13,8 +13,8 @@ layout(location = 0) out vec4 fragColor;
 layout(location = 1) out vec2 out_tex_coord;
 
 void main() {
-    gl_Position = mvp.proj * mvp.view * mvp.model * vec4(inPosition, 1.0);
-//    gl_Position = vec4(inPosition, 1.0);
+//    gl_Position = mvp.proj * mvp.view * mvp.model * vec4(inPosition, 1.0);
+    gl_Position = vec4(inPosition, 1.0);
     fragColor = vec4(inColor, 1.0);
     out_tex_coord = in_tex_coord;
 }

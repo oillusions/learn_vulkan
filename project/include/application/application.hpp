@@ -30,8 +30,8 @@ class Application {
 
         EventBus ebus;
         platform::WindowContext window_context;
-        vulkan::context::InstanceContext instace_context;
-        vulkan::context::DeviceContext device_context;
+        std::unique_ptr<vulkan::context::InstanceContext> instace_context;
+        std::unique_ptr<vulkan::context::DeviceContext> device_context;
 
         MempryPoolType mem_pool;
         vulkan::object_mgmt::RenderPass pass;
@@ -45,8 +45,8 @@ class Application {
         Application(
             EventBus event_bus,
             platform::WindowContext window_context,
-            vulkan::context::InstanceContext instance_context,
-            vulkan::context::DeviceContext device_context,
+            std::unique_ptr<vulkan::context::InstanceContext> instance_context,
+            std::unique_ptr<vulkan::context::DeviceContext> device_context,
             MempryPoolType mem_pool,
             vulkan::object_mgmt::RenderPass pass,
             vulkan::object_mgmt::frame::FrameManager frame_manager,

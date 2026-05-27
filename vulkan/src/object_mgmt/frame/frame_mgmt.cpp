@@ -1,11 +1,12 @@
 #include "vulkan/object_mgmt/frame/frame_mgmt.hpp"
-
-#include <error.hpp>
-#include <vulkan/vulkan_raii.hpp>
-#include "utils/utils.hpp"
 #include "vulkan/vulkan.hpp"
 
-static constexpr uint64_t timeout = 1000000; 
+#include <cstdint>
+#include <error.hpp>
+#include <utils/utils.hpp>
+
+
+static constexpr uint64_t timeout = 1000000000; 
 
 namespace vulkan::object_mgmt::frame {
     FrameManager::FrameManager(
@@ -76,7 +77,7 @@ namespace vulkan::object_mgmt::frame {
         
         auto result = device.waitForFences(*frame_state.sync_fence, vk::True, timeout);
         if (result != vk::Result::eSuccess) {
-            return Error("等待同步栅栏失败");
+            return Error("等待同步栅栏失败", vk::to_string(result));
         }
         device.resetFences(*frame_state.sync_fence);
 
@@ -102,7 +103,9 @@ namespace vulkan::object_mgmt::frame {
     }
 
     void FrameManager::present(Token& token) noexcept {
-        auto& frame_state = frame_states[frame_state_index];
+        auto& frame_state = frame_states[token.frame_state_index];
+
+        vk::Result result;
 
         const vk::PipelineStageFlags wait_dst_stage_mask[] = {
             vk::PipelineStageFlagBits::eColorAttachmentOutput
@@ -113,12 +116,21 @@ namespace vulkan::object_mgmt::frame {
             .setWaitSemaphores(*frame_state.image_available_semaphore)
             .setSignalSemaphores(*frame_state.render_finished_semaphore)
             .setWaitDstStageMask(wait_dst_stage_mask);
-        queue.submit(submit_info, *frame_state.sync_fence);
+        result = queue.submit(submit_info, *frame_state.sync_fence);
+        if (result != vk::Result::eSuccess) {
+            throw Error("命令缓冲区提交异常", vk::to_string(result));
+        }
 
         const auto present_info = vk::PresentInfoKHR()
             .setWaitSemaphores(*frame_state.render_finished_semaphore)
-            .setSwapchains(*swap_chain_context.swap_chain)
+            .setSwapchains(**swap_chain_context)
             .setImageIndices(token.image_index);
+
+        result = queue.presentKHR(present_info);
+        if (result != vk::Result::eSuccess) {
+            throw Error("呈现异常", vk::to_string(result));
+        }
+
 
         frame_state_index = (frame_state_index + 1) % (swap_chain_context.images.size() + 1);
     }
@@ -136,6 +148,7 @@ namespace vulkan::object_mgmt::frame {
         frame_states.reserve(frame_state_count);
 
         const auto command_pool_info = vk::CommandPoolCreateInfo()
+            .setFlags(vk::CommandPoolCreateFlagBits::eResetCommandBuffer)
             .setQueueFamilyIndex(0);
         auto result_command_pool = device.createCommandPool(command_pool_info)
             | Error::from("创建指令池失败");
@@ -193,10 +206,6 @@ namespace vulkan::object_mgmt::frame {
             
             frame_buffers.emplace_back(std::move(result_frame_buffer.value()));
         }
-        
-        auto result_frame_buffers = device.createFramebuffer(frame_buffer_info)
-            | Error::from("帧缓冲对象创建失败");
-        if (!result_command_buffers) return result_frame_buffers.error();
 
         return FrameManager(
             physical_device,
