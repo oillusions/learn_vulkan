@@ -1,4 +1,5 @@
 #include "vulkan/context/swap_chain.hpp"
+#include "vulkan/vulkan.hpp"
 
 #include <algorithm>
 
@@ -225,46 +226,6 @@ namespace vulkan::context {
         };
     }
 
-    inline vk::ComponentMapping
-    obtain_format_componentMapping(const vk::Format format) {
-        switch (format) {
-            case vk::Format::eB8G8R8A8Unorm :  
-            case vk::Format::eB8G8R8A8Snorm :  
-            case vk::Format::eB8G8R8A8Uscaled :
-            case vk::Format::eB8G8R8A8Sscaled :
-            case vk::Format::eB8G8R8A8Uint :   
-            case vk::Format::eB8G8R8A8Sint :   
-            case vk::Format::eB8G8R8A8Srgb : {
-                return vk::ComponentMapping()
-                    .setR(vk::ComponentSwizzle::eB)
-                    .setG(vk::ComponentSwizzle::eG)
-                    .setB(vk::ComponentSwizzle::eR)
-                    .setA(vk::ComponentSwizzle::eA);
-            }  
-
-            case vk::Format::eR8G8B8A8Unorm :  
-            case vk::Format::eR8G8B8A8Snorm :  
-            case vk::Format::eR8G8B8A8Uscaled :
-            case vk::Format::eR8G8B8A8Sscaled :
-            case vk::Format::eR8G8B8A8Uint :   
-            case vk::Format::eR8G8B8A8Sint :   
-            case vk::Format::eR8G8B8A8Srgb : {
-                return vk::ComponentMapping()
-                    .setR(vk::ComponentSwizzle::eR)
-                    .setG(vk::ComponentSwizzle::eG)
-                    .setB(vk::ComponentSwizzle::eB)
-                    .setA(vk::ComponentSwizzle::eA);
-            }
-            default : {
-                return vk::ComponentMapping()
-                    .setR(vk::ComponentSwizzle::eR)
-                    .setG(vk::ComponentSwizzle::eG)
-                    .setB(vk::ComponentSwizzle::eB)
-                    .setA(vk::ComponentSwizzle::eA);
-            }
-        }
-    }
-
     std::expected<SwapChainContext, Error> 
     SwapChainContext::create(
         vk::raii::Device& device,
@@ -299,7 +260,12 @@ namespace vulkan::context {
             .setViewType(vk::ImageViewType::e2D)
             .setFormat(config.surface_format.format)
             .setComponents(
-                obtain_format_componentMapping(config.surface_format.format)
+                vk::ComponentMapping(
+                    vk::ComponentSwizzle::eIdentity,
+                    vk::ComponentSwizzle::eIdentity,
+                    vk::ComponentSwizzle::eIdentity,
+                    vk::ComponentSwizzle::eIdentity
+                )
             )
             .setSubresourceRange(
                 vk::ImageSubresourceRange()

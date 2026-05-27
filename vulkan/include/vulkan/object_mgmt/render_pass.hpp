@@ -40,6 +40,7 @@ namespace vulkan::object_mgmt {
                             // vk::ImageLayout type;
                             uint32_t index;
 
+                        private:
                             Attachment(
                                 Builder& builder, 
                                 // const vk::ImageLayout type, 
@@ -51,6 +52,13 @@ namespace vulkan::object_mgmt {
                                 // type(type),
                                 index(index)
                             {};
+
+                        public:
+
+                            Attachment(const Attachment&) = delete;
+                            Attachment& operator = (const Attachment&) = delete;
+
+                            Attachment(Attachment&&) noexcept = default;
                         
                     };
 
@@ -82,6 +90,11 @@ namespace vulkan::object_mgmt {
                                 const vk::ImageLayout purpose,
                                 AttachmentUsage usage
                             ) noexcept;
+
+                            Subpass(const Subpass&) = delete;
+                            Subpass& operator = (const Subpass&) = delete;
+
+                            Subpass(Subpass&&) = default;
 
                     };
 
@@ -122,7 +135,11 @@ namespace vulkan::object_mgmt {
             {};
 
         public:
-            static Builder builder() noexcept; 
+            vk::raii::RenderPass& operator * () noexcept {
+                return pass;
+            }
+
+            static Builder builder() noexcept;
 
     };
 }

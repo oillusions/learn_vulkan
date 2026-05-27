@@ -11,6 +11,7 @@ target_sources("vulkan" PRIVATE
 
 target_link_libraries("vulkan" PRIVATE
     Vulkan::Vulkan
+    glm::glm
     common::error
 
     utils::utils

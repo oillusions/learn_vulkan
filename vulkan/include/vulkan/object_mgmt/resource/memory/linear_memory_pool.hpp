@@ -10,7 +10,7 @@
 
 
 
-namespace vulkan::object_mgmt::resuorce {
+namespace vulkan::object_mgmt {
 
     class LinearMemoryPool : public MemoryPool {
         private:

@@ -1,6 +1,7 @@
 #include "vulkan/object_mgmt/frame/frame_mgmt.hpp"
 
 #include <error.hpp>
+#include <vulkan/vulkan_raii.hpp>
 #include "utils/utils.hpp"
 #include "vulkan/vulkan.hpp"
 
@@ -13,14 +14,16 @@ namespace vulkan::object_mgmt::frame {
         vk::raii::Queue& queue,
         vulkan::context::SwapChainContext context,
         vk::raii::CommandPool command_pool,
-        std::vector<FrameState> frame_states
+        std::vector<FrameState> frame_states,
+        std::vector<vk::raii::Framebuffer> frame_buffers
         ) noexcept :
             physical_device(physical_device),
             device(device),
             queue(queue),
             swap_chain_context(std::move(context)),
             command_pool(std::move(command_pool)),
-            frame_states(std::move(frame_states))
+            frame_states(std::move(frame_states)),
+            frame_buffers(std::move(frame_buffers))
     {}
 
     inline vk::Extent2D obtain_image_extent(
@@ -93,7 +96,8 @@ namespace vulkan::object_mgmt::frame {
             *this,
             image_index,
             frame_state_index,
-            frame_state.command_buffer
+            frame_state.command_buffer,
+            frame_buffers[image_index]
         );
     }
 
@@ -123,7 +127,8 @@ namespace vulkan::object_mgmt::frame {
         const vk::raii::PhysicalDevice& physical_device,
         vk::raii::Device& device, 
         vk::raii::Queue& queue,
-        vulkan::context::SwapChainContext context
+        vulkan::context::SwapChainContext context,
+        RenderPass& pass
     ) noexcept {
         const auto frame_state_count = context.images.size() + 1;
 
@@ -172,13 +177,35 @@ namespace vulkan::object_mgmt::frame {
             );
         }
 
+        auto frame_buffer_info = vk::FramebufferCreateInfo()
+            .setRenderPass(*pass)
+            .setAttachmentCount(1)
+            .setLayers(1)
+            .setWidth(context.config.image_extent.width)
+            .setHeight(context.config.image_extent.height);
+        
+        std::vector<vk::raii::Framebuffer> frame_buffers;
+        frame_buffers.reserve(context.image_views.size());
+        for (const auto& view : context.image_views) {
+            frame_buffer_info.setAttachments(*view);
+            auto result_frame_buffer = device.createFramebuffer(frame_buffer_info)
+                | Error::from("帧缓冲对象创建失败");
+            
+            frame_buffers.emplace_back(std::move(result_frame_buffer.value()));
+        }
+        
+        auto result_frame_buffers = device.createFramebuffer(frame_buffer_info)
+            | Error::from("帧缓冲对象创建失败");
+        if (!result_command_buffers) return result_frame_buffers.error();
+
         return FrameManager(
             physical_device,
             device,
             queue,
             std::move(context),
             std::move(command_pool),
-            std::move(frame_states)
+            std::move(frame_states),
+            std::move(frame_buffers)
         );
     }
 }

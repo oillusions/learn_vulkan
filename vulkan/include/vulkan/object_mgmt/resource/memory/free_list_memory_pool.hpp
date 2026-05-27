@@ -9,8 +9,8 @@
 #include "detail.hpp"
 #include "vulkan/object_mgmt/resource/memory/interface/memory_pool.hpp"
 
-namespace vulkan::object_mgmt::resuorce {
-    template<detail::FreeListAllocatorStrategy Strategy>
+namespace vulkan::object_mgmt {
+    template<detail::AllocatorStrategy Strategy>
     class FreeListMemoryPool : public MemoryPool {
         public:
             vk::raii::DeviceMemory device_memory;
@@ -51,7 +51,7 @@ namespace vulkan::object_mgmt::resuorce {
 
             std::expected<Allocation, Error> allocate(const vk::DeviceSize size, const vk::DeviceSize alignment) noexcept override {
                 auto lock = std::lock_guard(*mtx);
-                if constexpr (Strategy == detail::FreeListAllocatorStrategy::FirstFit) {
+                if constexpr (Strategy == detail::AllocatorStrategy::FirstFit) {
                     for (auto it = free_list.begin(); it != free_list.end(); ++it) {
                         const auto aligned_offset = detail::alignUp(it->offset, alignment);
                         const auto waste_size = aligned_offset - it->offset;
@@ -82,7 +82,7 @@ namespace vulkan::object_mgmt::resuorce {
                         }
                     };
                     return Error("未找到合适的空闲空间");
-                } else if constexpr (Strategy == detail::FreeListAllocatorStrategy::BestFit) {
+                } else if constexpr (Strategy == detail::AllocatorStrategy::BestFit) {
                     auto best_it = free_list.end();
                     vk::DeviceSize best_available_size = 0;
                     for (auto it = free_list.begin(); it != free_list.end(); ++it) {

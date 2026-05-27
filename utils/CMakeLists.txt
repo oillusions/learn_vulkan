@@ -9,7 +9,7 @@ target_sources("utils" PRIVATE
     "${source_files}"
 )
 
-target_link_libraries("utils" PRIVATE
+target_link_libraries("utils" PUBLIC
     Vulkan::Vulkan
     
     common::error

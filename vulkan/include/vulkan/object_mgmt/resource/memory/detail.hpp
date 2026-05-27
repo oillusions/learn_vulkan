@@ -2,8 +2,8 @@
 
 #include <vulkan/vulkan.hpp>
 
-namespace vulkan::detail {
-    enum class FreeListAllocatorStrategy {
+namespace vulkan::object_mgmt::detail {
+    enum class AllocatorStrategy {
         FirstFit = 0,
         BestFit,
     };

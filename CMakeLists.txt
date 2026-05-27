@@ -37,10 +37,13 @@ add_subdirectory(libs/common/utils/event_bus)
 add_subdirectory(utils)
 add_subdirectory(platform)
 add_subdirectory(vulkan)
+add_subdirectory(shader)
+
 
 target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE
     Vulkan::Vulkan
     glfw
+    glm::glm
 
     common::logger
     common::error

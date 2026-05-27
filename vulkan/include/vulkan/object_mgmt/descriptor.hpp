@@ -33,11 +33,11 @@ namespace vulkan::object_mgmt {
             const std::list<vk::DescriptorSetLayoutBinding>& get_bindings() const noexcept; 
             std::expected<DescriptorPool, Error> create_pool(const vk::DeviceSize max_sets = 1) noexcept;
 
-            static Builder builder() noexcept;
-
             vk::raii::DescriptorSetLayout& operator * () noexcept {
                 return layout;
             }
+
+            static Builder builder() noexcept;
 
         private:
             std::list<vk::DescriptorSetLayoutBinding> bind_items;
@@ -79,14 +79,22 @@ namespace vulkan::object_mgmt {
             };
             friend Builder;
 
+        private:
+            vk::raii::Device& device;
+            vk::raii::DescriptorPool pool;
+
+        public:
+
             std::expected<DescriptorSet, Error> allocate(DescriptorSetLayout& layout) noexcept;
             std::expected<std::vector<DescriptorSet>, Error> allocateMultple() noexcept;
+
+            vk::raii::DescriptorPool& operator * () noexcept {
+                return pool;
+            }
 
             static Builder builder() noexcept;
 
         private:
-            vk::raii::Device& device;
-            vk::raii::DescriptorPool pool;
 
             DescriptorPool(
                 vk::raii::Device& device,
@@ -98,14 +106,20 @@ namespace vulkan::object_mgmt {
     };
 
     class DescriptorSet {
-        public:
-
-            void writeItem(vk::WriteDescriptorSet write_info) noexcept;
-
         private:
             vk::raii::Device& device;
             DescriptorSetLayout& layout;
             vk::raii::DescriptorSet set;
+
+        public:
+
+            void writeItem(vk::WriteDescriptorSet write_info) noexcept;
+
+            vk::raii::DescriptorSet& operator * () noexcept {
+                return set;
+            }
+
+        private:
             
             DescriptorSet(
                 vk::raii::Device& device,

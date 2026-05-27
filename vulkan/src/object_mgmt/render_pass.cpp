@@ -2,9 +2,7 @@
 #include "vulkan/vulkan.hpp"
 #include <cstdint>
 #include <ranges>
-
 #include <utils/utils.hpp>
-#include <vulkan/vulkan_to_string.hpp>
 
 namespace vulkan::object_mgmt {
 
@@ -12,8 +10,8 @@ namespace vulkan::object_mgmt {
     RenderPass::Builder::appendAttachment(
         // const vk::ImageLayout type
     ) noexcept {
-        attachment_descriptions.emplace_back();
-        attachment_list.push_back(
+        attachment_descriptions.emplace_back(vk::AttachmentDescription());
+        attachment_list.emplace_back(
             RenderPass::Builder::Attachment(
                 *this,
                 // type,
@@ -26,8 +24,8 @@ namespace vulkan::object_mgmt {
 
     RenderPass::Builder::Subpass& 
     RenderPass::Builder::appendSubpass() noexcept {
-        subpass_descriptions.emplace_back();
-        subpass_list.push_back(
+        subpass_descriptions.emplace_back(vk::SubpassDescription());
+        subpass_list.emplace_back(
             RenderPass::Builder::Subpass(
                 *this, 
                 subpass_count++,
@@ -49,10 +47,10 @@ namespace vulkan::object_mgmt {
     }
 
     struct SubpassAttachment {
-        std::vector<vk::AttachmentReference> colors;
-        std::vector<vk::AttachmentReference> inputs;
-        std::vector<vk::AttachmentReference> resolves;
-        std::vector<uint32_t> preserves;
+        std::vector<vk::AttachmentReference> colors{};
+        std::vector<vk::AttachmentReference> inputs{};
+        std::vector<vk::AttachmentReference> resolves{};
+        std::vector<uint32_t> preserves{};
         vk::AttachmentReference depth_stencil{UINT32_MAX, vk::ImageLayout::eUndefined};
     };
 
@@ -64,8 +62,7 @@ namespace vulkan::object_mgmt {
         std::vector<detail::AttachmentReferenceInfo> prev_infos;
         std::vector<vk::DeviceSize> attachment_ref_counters;
 
-        attachment_refs.resize(attachment_descriptions.size());
-
+        attachment_refs.resize(subpass_descriptions.size());
         prev_infos.resize(attachment_descriptions.size());
         attachment_ref_counters.resize(attachment_descriptions.size());
 
@@ -114,6 +111,8 @@ namespace vulkan::object_mgmt {
                 attachment_count++;
             }
 
+            
+
             for (auto& attachment : subpass.attachment_refs) {
                 switch (attachment.usage) {
                     case AttachmentUsage::Color : {
@@ -124,8 +123,8 @@ namespace vulkan::object_mgmt {
                                     .setDstSubpass(subpass.index)
                                     .setSrcAccessMask(vk::AccessFlagBits::eNone)
                                     .setDstAccessMask(vk::AccessFlagBits::eColorAttachmentWrite)
-                                    .setSrcStageMask(vk::PipelineStageFlagBits::eNone)
-                                    .setDstStageMask(vk::PipelineStageFlagBits::eFragmentShader)
+                                    .setSrcStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput)
+                                    .setDstStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput)
                             );
                         }
                         break;
@@ -134,18 +133,32 @@ namespace vulkan::object_mgmt {
                 }
             }
 
-            subpass.description.setColorAttachments(
-                attachment_refs[subpass.index].colors
-            );
-            subpass.description.setInputAttachments(
-                attachment_refs[subpass.index].inputs
-            );
-            subpass.description.setResolveAttachments(
-                attachment_refs[subpass.index].resolves
-            );
-            subpass.description.setPreserveAttachments(
-                attachment_refs[subpass.index].preserves
-            );
+
+            if (!attachment_refs[subpass.index].colors.empty()) {
+                subpass.description.setColorAttachments(
+                    attachment_refs[subpass.index].colors
+                );
+            }
+
+            if (!attachment_refs[subpass.index].inputs.empty()) {
+                subpass.description.setInputAttachments(
+                    attachment_refs[subpass.index].inputs
+                );
+            }
+
+            if (!attachment_refs[subpass.index].resolves.empty()) {
+                subpass.description.setResolveAttachments(
+                    attachment_refs[subpass.index].resolves
+                );
+            }
+
+            if (!attachment_refs[subpass.index].preserves.empty()) {
+                subpass.description.setPreserveAttachments(
+                    attachment_refs[subpass.index].preserves
+                );
+            }
+        
+
             if (attachment_refs[subpass.index].depth_stencil.attachment == UINT32_MAX) {
                 subpass.description.setPDepthStencilAttachment(nullptr);
             } else {
@@ -161,12 +174,12 @@ namespace vulkan::object_mgmt {
             }
         }
 
-        const auto subpass_array = subpass_descriptions | std::ranges::to<std::vector>();
-        const auto attachment_array = attachment_descriptions | std::ranges::to<std::vector>();
+        const auto subpass_description_array = subpass_descriptions | std::ranges::to<std::vector>();
+        const auto attachment_description_array = attachment_descriptions | std::ranges::to<std::vector>();
 
         const auto render_pass_info = vk::RenderPassCreateInfo()
-            .setSubpasses(subpass_array)
-            .setAttachments(attachment_array)
+            .setSubpasses(subpass_description_array)
+            .setAttachments(attachment_description_array)
             .setDependencies(subpass_dependencies);
 
         auto result_render_pass = device.createRenderPass(render_pass_info)
