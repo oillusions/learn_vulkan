@@ -11,6 +11,7 @@ target_sources("utils" PRIVATE
 
 target_link_libraries("utils" PUBLIC
     Vulkan::Vulkan
+    glm::glm
     
     common::error
     common::logger

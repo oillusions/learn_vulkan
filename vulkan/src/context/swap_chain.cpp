@@ -1,4 +1,5 @@
 #include "vulkan/context/swap_chain.hpp"
+#include "utils/global_logger.hpp"
 #include "vulkan/vulkan.hpp"
 
 #include <algorithm>
@@ -6,6 +7,7 @@
 #include <vulkan/vulkan_format_traits.hpp>
 
 #include <utils/utils.hpp>
+#include <vulkan/vulkan_to_string.hpp>
 
 namespace vulkan::context {
     inline vk::DeviceSize score_surface_format(
@@ -74,11 +76,11 @@ namespace vulkan::context {
         auto score_count{0};
         switch (surface_present_mode.presentMode) {
             case vk::PresentModeKHR::eFifo : {
-                score_count += 20;
+                score_count += 15;
                 break;
             }
             case vk::PresentModeKHR::eMailbox : {
-                score_count += 15;
+                score_count += 20;
                 break;
             }
             case vk::PresentModeKHR::eFifoRelaxed : {
@@ -177,7 +179,7 @@ namespace vulkan::context {
         const auto& max_image_count = surface_capabilities.maxImageCount;
 
         return std::clamp(
-            obtain_present_required_image_count(surface_present_mode),
+            obtain_present_required_image_count(surface_present_mode) + 1,
             min_image_count, max_image_count
         );
     }
@@ -193,7 +195,8 @@ namespace vulkan::context {
         const auto surface_format = result_surface_format.value();
 
         auto result_surface_present_mode = select_surface_present_mode(
-            physical_device, surface);
+            physical_device, surface
+        );
         if (!result_surface_present_mode) return result_surface_present_mode.error().forward("挑选可用的表面呈现模式失败");
         const auto surface_present_mode = std::move(result_surface_present_mode).value();
 
@@ -230,9 +233,10 @@ namespace vulkan::context {
     SwapChainContext::create(
         vk::raii::Device& device,
         vk::raii::SurfaceKHR surface,
-        const SwapChainConfig& config
+        const SwapChainConfig& config,
+        std::optional<SwapChainContext> old_context
     ) noexcept {
-        const auto swap_chain_info = vk::SwapchainCreateInfoKHR()
+        auto swap_chain_info = vk::SwapchainCreateInfoKHR()
             .setSurface(surface)
             .setPresentMode(config.present_mode)
             .setImageUsage(vk::ImageUsageFlagBits::eColorAttachment)
@@ -245,6 +249,9 @@ namespace vulkan::context {
             .setPreTransform(vk::SurfaceTransformFlagBitsKHR::eIdentity)
             .setClipped(vk::True)
             .setCompositeAlpha(config.composite_alpha_flag_bits);
+        if (old_context) {
+            swap_chain_info.setOldSwapchain(old_context->swap_chain);
+        }
 
         auto result_swap_chain = device.createSwapchainKHR(swap_chain_info)
             | Error::from("创建交换链对象失败");

@@ -1,7 +1,9 @@
 #include <application/application.hpp>
 
-#include <GLFW/glfw3.h>
+#include <glm/ext/matrix_clip_space.hpp>
+#include <glm/trigonometric.hpp>
 #include <memory>
+#include <optional>
 
 #include "application/impl/device.hpp"
 #include "application/impl/instance.hpp"
@@ -12,7 +14,12 @@
 
 #include "platform/input.hpp"
 #include "platform/window.hpp"
-#include "vulkan/vulkan.hpp"
+#include "utils/obj_model.hpp"
+#include "vulkan/object_mgmt/pipeline.hpp"
+
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 
 using namespace vulkan::object_mgmt;
 
@@ -109,6 +116,17 @@ Application Application::create() {
         render_pass
     )   | Error::unwrap("帧管理器创建失败");
 
+    // const auto vertex_attribute_info = ObjModel::obtain_vertex_attribute_description();
+    // const auto vertex_binding_info = ObjModel::obtain_vertex_bind_description();
+    // const auto input_assembly_info = ObjModel::obtain_input_assembly_info();
+
+    // const auto vertex_info = PipeLine::VertexInfo {
+    //     vk::PipelineVertexInputStateCreateInfo()
+    //         .setVertexAttributeDescriptions(vertex_attribute_info)
+    //         .setVertexBindingDescriptions(vertex_binding_info),
+    //     input_assembly_info
+    // };
+
     auto pipeline = PipeLine::create(
         **device_context, 
         render_pass,
@@ -133,7 +151,7 @@ Application::~Application() noexcept {
     glog.log<LogLevel::Info>("应用已退出");
 }
 
-void Application::init() noexcept {
+void Application::init() {
     platform::input::init_platform_event(ebus, window_context);
 
     ebus.subscribe<platform::input::event::types::KeyboardEventContent>(
@@ -144,6 +162,17 @@ void Application::init() noexcept {
             }
     });
 
+    ebus.subscribe<platform::input::event::types::FrameResizeEventContent>(
+        platform::input::EventNames(platform::input::EventNames::eFrameResize).to_value(),
+        [this] (const platform::input::event::types::FrameResizeEventContent& content) {
+            frame_manager.rebuild(pass)
+                | Error::unwrap("重建帧管理器失败");
+    });
+
+    auto obj_models = ObjModel::create()
+        | Error::unwrap("加载obj模型失败");
+    auto obj_model = std::move(obj_models)[0];
+
     auto vertex_buffer = Buffer::create(
         **device_context,
         mem_pool,
@@ -152,7 +181,8 @@ void Application::init() noexcept {
             .setSharingMode(vk::SharingMode::eExclusive)
             .setSize(sizeof(vertices))
     )   | Error::unwrap("顶点缓冲区创建失败");
-    vertex_buffer.load_buffer_host(vertices);
+    vertex_buffer.load_buffer_host(vertices)
+        | Error::unwrap("顶点加载失败");
 
     auto index_buffer = Buffer::create(
         **device_context,
@@ -162,7 +192,8 @@ void Application::init() noexcept {
             .setSharingMode(vk::SharingMode::eExclusive)
             .setSize(sizeof(indices))
     )   | Error::unwrap("索引缓冲区创建失败");
-    index_buffer.load_buffer_host(indices);
+    index_buffer.load_buffer_host(indices)
+        | Error::unwrap("索引加载失败");
 
     auto uniform_buffer= Buffer::create(
         **device_context,
@@ -193,9 +224,8 @@ void Application::init() noexcept {
         .setDstArrayElement(0)
     );
 
-
-
     resource = std::make_unique<Resources>(Resources{
+        std::nullopt,
         std::move(vertex_buffer),
         std::move(index_buffer),
         std::move(uniform_buffer),
@@ -212,8 +242,14 @@ bool Application::loop() {
     if (!glfwWindowShouldClose(window_context.window)) {
         if (resource == nullptr) return true;
 
-        auto token = frame_manager.obtain_frame_command_buffer()
-            |   Error::unwrap("获取指令缓冲区失败");
+        auto result_token = frame_manager.obtain_frame_command_buffer();
+        if (!result_token) {
+            frame_manager.rebuild(pass)
+                | Error::unwrap("重建帧管理器失败");
+            return true;
+        }
+        auto token = std::move(result_token).value()
+            | Error::unwrap("获取指令缓冲区失败");
 
         const auto command_buffer_begin_info = vk::CommandBufferBeginInfo()
             .setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);

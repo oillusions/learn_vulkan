@@ -1,5 +1,6 @@
 #pragma once
 
+#include <optional>
 #include <vector>
 #include <error.hpp>
 
@@ -20,7 +21,7 @@ namespace vulkan::context {
             vk::raii::SwapchainKHR swap_chain;
             std::vector<vk::Image> images;
             std::vector<vk::raii::ImageView> image_views;
-            const SwapChainConfig config;
+            SwapChainConfig config;
 
             SwapChainContext(
                 vk::raii::SurfaceKHR surface,
@@ -50,7 +51,8 @@ namespace vulkan::context {
             create(
                 vk::raii::Device& device,
                 vk::raii::SurfaceKHR surface,
-                const SwapChainConfig& config
+                const SwapChainConfig& config,
+                std::optional<SwapChainContext> old_context = std::nullopt
             ) noexcept;
     };
 }

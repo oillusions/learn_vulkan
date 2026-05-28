@@ -46,7 +46,8 @@ namespace vulkan::object_mgmt {
     std::expected<PipeLine, Error> PipeLine::create(
         vk::raii::Device& device,
         RenderPass& pass,
-        DescriptorSetLayout& set_layout
+        DescriptorSetLayout& set_layout,
+        std::optional<VertexInfo> vertex_info
     ) noexcept {
 
         auto result_vert_shader_code = load_shader_code(shader_path / vert_shader_name);
@@ -190,7 +191,7 @@ namespace vulkan::object_mgmt {
             .setViewports(viewport)
             .setScissors(scissor);
 
-        const auto pipeline_info = vk::GraphicsPipelineCreateInfo()
+        auto pipeline_info = vk::GraphicsPipelineCreateInfo()
             .setPDynamicState(&dynamic_state_info)
             .setStages(shader_stage_info)
             .setLayout(pipeline_layout)
@@ -202,6 +203,12 @@ namespace vulkan::object_mgmt {
             .setPViewportState(&viewport_state_info)
             .setRenderPass(*pass)
             .setSubpass(0);
+
+        if (vertex_info) {
+            pipeline_info
+                .setPVertexInputState(&vertex_info->vertex_input_info)
+                .setPInputAssemblyState(&vertex_info->assembly_info);
+        }
         
         auto result_pipeline = device.createGraphicsPipeline(
             VK_NULL_HANDLE, 

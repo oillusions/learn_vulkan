@@ -27,9 +27,9 @@ std::set<T> operator | (const std::set<T> &l, const std::set<T> &r) noexcept {
 template<typename L, typename Func>
 requires std::invocable<Func, L>
 constexpr auto operator | (L&& l, Func&& func)
-    noexcept(noexcept(func(std::forward<L>(l))))
-    -> decltype(func(std::forward<L>(l))) {
-    return func(std::forward<L>(l));
+    noexcept(noexcept(std::forward<Func>(func)(std::forward<L>(l))))
+    -> decltype(std::forward<Func>(func)(std::forward<L>(l))) {
+    return std::forward<Func>(func)(std::forward<L>(l));
 }
 
 template<typename L, typename Func>

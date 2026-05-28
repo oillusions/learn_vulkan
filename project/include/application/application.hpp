@@ -3,10 +3,12 @@
 
 #include <cstddef>
 #include <memory>
+#include <optional>
 #include <vulkan/vulkan.hpp>
 
 #include "event_bus.hpp"
 #include "platform/window.hpp"
+#include "utils/obj_model.hpp"
 #include "vulkan/context/device.hpp"
 #include "vulkan/object_mgmt./resource/memory/free_list_memory_pool.hpp"
 #include "vulkan/object_mgmt/frame/frame_mgmt.hpp"
@@ -21,6 +23,7 @@ class Application {
     vulkan::object_mgmt::detail::AllocatorStrategy::BestFit>;
     private:
         struct Resources {
+            std::optional<ObjModel> model;
             vulkan::object_mgmt::Buffer vertex_buffer;
             vulkan::object_mgmt::Buffer index_buffer;
             vulkan::object_mgmt::Buffer uniform_buffer;
@@ -66,7 +69,7 @@ class Application {
 
         ~Application() noexcept;
 
-        void init() noexcept;
+        void init();
 
         bool loop();
 

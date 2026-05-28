@@ -57,7 +57,7 @@ namespace vulkan::object_mgmt {
         return pool_sizes;
     }
 
-    const std::list<vk::DescriptorSetLayoutBinding>&
+    const std::vector<vk::DescriptorSetLayoutBinding>&
     DescriptorSetLayout::get_bindings() const noexcept {
         return bind_items;
     }

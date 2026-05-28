@@ -1,8 +1,11 @@
 #include "vulkan/object_mgmt/frame/frame_mgmt.hpp"
+#include "vulkan/context/swap_chain.hpp"
+#include "vulkan/object_mgmt/render_pass.hpp"
 #include "vulkan/vulkan.hpp"
 
 #include <cstdint>
 #include <error.hpp>
+#include <optional>
 #include <utils/utils.hpp>
 
 
@@ -24,86 +27,73 @@ namespace vulkan::object_mgmt::frame {
             swap_chain_context(std::move(context)),
             command_pool(std::move(command_pool)),
             frame_states(std::move(frame_states)),
-            frame_buffers(std::move(frame_buffers))
+            frame_buffers(std::move(frame_buffers)),
+            curr_frame_sync(0)
     {}
 
-    inline vk::Extent2D obtain_image_extent(
-        const vk::SurfaceCapabilitiesKHR& surface_capabilities
-    ) noexcept {
-        const auto& min_image_extent = surface_capabilities.minImageExtent;
-        const auto& max_image_extent = surface_capabilities.maxImageExtent;
-        const auto& curr_image_extent = surface_capabilities.currentExtent;
+    std::expected<void, Error> FrameManager::rebuild(RenderPass& pass) noexcept {
 
-        const auto available_width = std::clamp(
-            curr_image_extent.width, min_image_extent.width, max_image_extent.width
+        const auto result_config = context::SwapChainContext::obtain_config(
+            physical_device, 
+            swap_chain_context.surface
         );
-        const auto available_height = std::clamp(
-            curr_image_extent.height, min_image_extent.height, max_image_extent.height
+        if (!result_config) return result_config.error().forward("获取交换链配置失败");
+
+        device.waitIdle();
+        
+        auto result_new_swap_chain = context::SwapChainContext::create(
+            device, 
+            std::move(swap_chain_context.surface),
+            result_config.value(),
+            std::move(swap_chain_context)
         );
+        if (!result_new_swap_chain) return result_new_swap_chain.error().forward("重建交换链失败");
 
-        return vk::Extent2D(available_width, available_height);
-    }
+        auto result_new_frame_mgmt = FrameManager::create(
+            physical_device, device, 
+            queue, 
+            std::move(result_new_swap_chain.value()), 
+            pass
+        );
+        if (!result_new_frame_mgmt) return result_new_frame_mgmt.error().forward("重建帧管理器失败");
+        auto self = this;
 
-    std::expected<void, Error> FrameManager::rebuild_swap_chain() noexcept {
-        auto config = swap_chain_context.config;
-        auto result_surface_capabilities = physical_device.getSurfaceCapabilitiesKHR(swap_chain_context.surface)
-            | Error::from("获取表面支持的能力信息失败");
-        config.image_extent = obtain_image_extent(result_surface_capabilities.value());
+        this->~FrameManager();
 
-        const auto swap_chain_info = vk::SwapchainCreateInfoKHR()
-            .setSurface(swap_chain_context.surface)
-            .setPresentMode(config.present_mode)
-            .setImageUsage(vk::ImageUsageFlagBits::eColorAttachment)
-            .setImageFormat(config.surface_format.format)
-            .setImageColorSpace(config.surface_format.colorSpace)
-            .setImageSharingMode(vk::SharingMode::eExclusive)
-            .setImageArrayLayers(1)
-            .setMinImageCount(config.image_count)
-            .setImageExtent(config.image_extent)
-            .setPreTransform(vk::SurfaceTransformFlagBitsKHR::eIdentity)
-            .setClipped(vk::True)
-            .setCompositeAlpha(config.composite_alpha_flag_bits)
-            .setOldSwapchain(swap_chain_context.swap_chain);
-
-        auto result_swap_chain = device.createSwapchainKHR(swap_chain_info)
-            | Error::from("创建交换链对象失败");
-            swap_chain_context.swap_chain = std::move(result_swap_chain).value();
+        new (this) FrameManager(std::move(result_new_frame_mgmt.value()));
 
         return {};
     }
 
-    std::expected<FrameManager::Token, Error> FrameManager::obtain_frame_command_buffer() noexcept {
-        auto& frame_state = frame_states[frame_state_index];
+    std::optional<std::expected<FrameManager::Token, Error>> FrameManager::obtain_frame_command_buffer() noexcept {
+        auto& sync = frame_states[curr_frame_sync];
         
-        auto result = device.waitForFences(*frame_state.sync_fence, vk::True, timeout);
+        auto result = device.waitForFences(*sync.sync_fence, vk::True, timeout);
         if (result != vk::Result::eSuccess) {
             return Error("等待同步栅栏失败", vk::to_string(result));
         }
-        device.resetFences(*frame_state.sync_fence);
+        device.resetFences(*sync.sync_fence);
 
         auto result_image_index = swap_chain_context.swap_chain.acquireNextImage(
             timeout, 
-            frame_state.image_available_semaphore, 
-            nullptr
+            sync.image_available_semaphore
         )   | Error::from("获取交换链图像索引失败");
         if (!result_image_index) {
-            auto result = rebuild_swap_chain();
-            if (!result) return result.error().forward("重建交换链失败");
-            return obtain_frame_command_buffer();
+            return std::nullopt;
         }
         const auto image_index = result_image_index.value();
-
+        
         return Token(
             *this,
+            frame_states[curr_frame_sync].command_buffer,
+            frame_buffers[image_index],
             image_index,
-            frame_state_index,
-            frame_state.command_buffer,
-            frame_buffers[image_index]
+            curr_frame_sync
         );
     }
 
-    void FrameManager::present(Token& token) noexcept {
-        auto& frame_state = frame_states[token.frame_state_index];
+    void FrameManager::present(Token& token) {
+        auto& sync = frame_states[token.frame_sync_index];
 
         vk::Result result;
 
@@ -112,17 +102,17 @@ namespace vulkan::object_mgmt::frame {
         };
 
         const auto submit_info = vk::SubmitInfo()
-            .setCommandBuffers(*frame_state.command_buffer)
-            .setWaitSemaphores(*frame_state.image_available_semaphore)
-            .setSignalSemaphores(*frame_state.render_finished_semaphore)
+            .setCommandBuffers(*sync.command_buffer)
+            .setWaitSemaphores(*sync.image_available_semaphore)
+            .setSignalSemaphores(*sync.render_finished_semaphore)
             .setWaitDstStageMask(wait_dst_stage_mask);
-        result = queue.submit(submit_info, *frame_state.sync_fence);
+        result = queue.submit(submit_info, sync.sync_fence);
         if (result != vk::Result::eSuccess) {
             throw Error("命令缓冲区提交异常", vk::to_string(result));
         }
 
         const auto present_info = vk::PresentInfoKHR()
-            .setWaitSemaphores(*frame_state.render_finished_semaphore)
+            .setWaitSemaphores(*sync.render_finished_semaphore)
             .setSwapchains(**swap_chain_context)
             .setImageIndices(token.image_index);
 
@@ -130,9 +120,8 @@ namespace vulkan::object_mgmt::frame {
         if (result != vk::Result::eSuccess) {
             throw Error("呈现异常", vk::to_string(result));
         }
-
-
-        frame_state_index = (frame_state_index + 1) % (swap_chain_context.images.size() + 1);
+        
+        curr_frame_sync = (curr_frame_sync + 1) % frame_states.size();
     }
 
     std::expected<FrameManager, Error> FrameManager::create(

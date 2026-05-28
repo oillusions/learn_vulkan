@@ -2,7 +2,6 @@
 
 #include "vulkan/vulkan.hpp"
 #include <expected>
-#include <list>
 
 #include <vulkan/vulkan_raii.hpp>
 
@@ -24,13 +23,13 @@ namespace vulkan::object_mgmt {
 
                     private:
                     vk::DeviceSize item_count{0};
-                    std::list<vk::DescriptorSetLayoutBinding> bind_items;
+                    std::vector<vk::DescriptorSetLayoutBinding> bind_items;
 
             };
             friend Builder;
 
             std::vector<vk::DescriptorPoolSize> get_pool_sizes() const noexcept;
-            const std::list<vk::DescriptorSetLayoutBinding>& get_bindings() const noexcept; 
+            const std::vector<vk::DescriptorSetLayoutBinding>& get_bindings() const noexcept; 
             std::expected<DescriptorPool, Error> create_pool(const vk::DeviceSize max_sets = 1) noexcept;
 
             vk::raii::DescriptorSetLayout& operator * () noexcept {
@@ -40,14 +39,14 @@ namespace vulkan::object_mgmt {
             static Builder builder() noexcept;
 
         private:
-            std::list<vk::DescriptorSetLayoutBinding> bind_items;
+            std::vector<vk::DescriptorSetLayoutBinding> bind_items;
             vk::raii::Device& device;
             vk::raii::DescriptorSetLayout layout;
 
             DescriptorSetLayout(
                 vk::raii::Device& device,
                 vk::raii::DescriptorSetLayout layout,
-                std::list<vk::DescriptorSetLayoutBinding> bind_items
+                std::vector<vk::DescriptorSetLayoutBinding> bind_items
             ) noexcept :
                 device(device),
                 layout(std::move(layout)),
